@@ -12,5 +12,5 @@ langchain-text-splitters
 langchain-huggingface
 langchain-mistralai
 
-chromadb
+faiss-cpu
 pymupdf

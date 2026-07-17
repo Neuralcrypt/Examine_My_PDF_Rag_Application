@@ -4,7 +4,7 @@ import shutil
 import time
 
 from langchain_community.document_loaders import PyMuPDFLoader
-from langchain_community.vectorstores import Chroma
+from langchain_community.vectorstores import FAISS
 from langchain_huggingface import HuggingFaceEmbeddings
 from langchain_text_splitters import RecursiveCharacterTextSplitter
 
@@ -12,7 +12,6 @@ from langchain_text_splitters import RecursiveCharacterTextSplitter
 BASE_DIR = Path(__file__).resolve().parent
 APP_DATA_DIR = BASE_DIR / ".app_data"
 UPLOAD_DIR = APP_DATA_DIR / "uploads"
-CHROMA_DIR = APP_DATA_DIR / "chroma_db"
 
 
 def get_embedding_model() -> HuggingFaceEmbeddings:
@@ -25,21 +24,8 @@ def release_vectorstore(vectorstore) -> None:
     if vectorstore is None:
         return
 
-    try:
-        vectorstore.delete_collection()
-    except Exception:
-        pass
-
-    try:
-        client = getattr(vectorstore, "_client", None)
-        system = getattr(client, "_system", None)
-        if system is not None:
-            system.stop()
-    except Exception:
-        pass
-
     gc.collect()
-    time.sleep(0.25)
+    time.sleep(0.1)
 
 
 def remove_tree_with_retries(path: Path, retries: int = 6, delay: float = 0.25) -> None:
@@ -89,19 +75,16 @@ def split_documents(documents):
 
 
 def build_vectorstore(pdf_path: Path):
-    remove_tree_with_retries(CHROMA_DIR)
-
     documents = load_pdf_documents(pdf_path)
     chunks = split_documents(documents)
-    vectorstore = Chroma.from_documents(
+    vectorstore = FAISS.from_documents(
         documents=chunks,
         embedding=get_embedding_model(),
-        persist_directory=str(CHROMA_DIR),
     )
     return vectorstore, len(documents), len(chunks)
 
 
-def get_retriever(vectorstore: Chroma):
+def get_retriever(vectorstore: FAISS):
     return vectorstore.as_retriever(
         search_type="mmr",
         search_kwargs={
