@@ -35,11 +35,21 @@ PROMPT = ChatPromptTemplate.from_messages(
 
 def get_mistral_api_key() -> str:
     api_key = os.getenv("MISTRAL_API_KEY", "").strip()
-    if not api_key:
-        raise RuntimeError(
-            "Missing MISTRAL_API_KEY in .env. Add the key and restart the Streamlit server."
-        )
-    return api_key
+    if api_key:
+        return api_key
+
+    try:
+        secret_value = st.secrets.get("MISTRAL_API_KEY", "")
+    except Exception:
+        secret_value = ""
+
+    api_key = str(secret_value).strip()
+    if api_key:
+        return api_key
+
+    raise RuntimeError(
+        "Missing MISTRAL_API_KEY. Add it to .env for local runs or Streamlit secrets for deployment, then restart the app."
+    )
 
 
 def create_llm() -> ChatMistralAI:
@@ -464,3 +474,4 @@ else:
                 )
             else:
                 st.error(f"Request failed: {error}")
+
